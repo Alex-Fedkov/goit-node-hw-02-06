@@ -1,18 +1,8 @@
-const express = require("express");
+const service = require("../models");
 
-const {
-  listContacts,
-  getContactById,
-  removeContact,
-  addContact,
-  updateContact,
-} = require("../../models/contacts");
-
-const router = express.Router();
-
-router.get("/", async (req, res, next) => {
+const get = async (req, res, next) => {
   try {
-    const contacts = await listContacts();
+    const contacts = await service.getAllContacts();
     return res.status(200).json({
       status: "success",
       code: 200,
@@ -24,11 +14,11 @@ router.get("/", async (req, res, next) => {
     next(error);
   }
   res.json({ message: "template message" });
-});
+};
 
-router.get("/:contactId", async (req, res, next) => {
+const getById = async (req, res, next) => {
   try {
-    const contact = await getContactById(req.params.contactId);
+    const contact = await service.getContactById(req.params.contactId);
     if (contact) {
       return res.status(200).json({
         status: "success",
@@ -47,9 +37,9 @@ router.get("/:contactId", async (req, res, next) => {
     next(error);
   }
   res.json({ message: "template message" });
-});
+};
 
-router.post("/", async (req, res, next) => {
+const create = async (req, res, next) => {
   const { name, email, phone } = req.body;
   if (!name || !email || !phone) {
     return res.status(400).json({
@@ -59,7 +49,7 @@ router.post("/", async (req, res, next) => {
     });
   }
   try {
-    const contact = await addContact(req.body);
+    const contact = await service.createContact(req.body);
     return res.status(201).json({
       status: "success",
       code: 201,
@@ -71,11 +61,11 @@ router.post("/", async (req, res, next) => {
     next(error);
   }
   res.json({ message: "template message" });
-});
+};
 
-router.delete("/:contactId", async (req, res, next) => {
+const remove = async (req, res, next) => {
   try {
-    const isSuccess = await removeContact(req.params.contactId);
+    const isSuccess = await service.removeContact(req.params.contactId);
     if (isSuccess) {
       return res.status(200).json({
         status: "success",
@@ -92,9 +82,35 @@ router.delete("/:contactId", async (req, res, next) => {
     next(error);
   }
   res.json({ message: "template message" });
-});
+};
 
-router.put("/:contactId", async (req, res, next) => {
+const updateStatus = async (req, res, next) => {
+  const { contactId } = req.params;
+  const { favorite = false } = req.body;
+
+  try {
+    const contact = await service.updateContact(contactId, { favorite });
+    if (contact) {
+      res.json({
+        status: "success",
+        code: 200,
+        data: { contact },
+      });
+    } else {
+      res.status(404).json({
+        status: "error",
+        code: 404,
+        message: `Not found contact id: ${contactId}`,
+        data: "Not Found",
+      });
+    }
+  } catch (e) {
+    console.error(e);
+    next(e);
+  }
+};
+
+const update = async (req, res, next) => {
   const { name, email, phone } = req.body;
   if (name || email || phone) {
     return res.status(400).json({
@@ -104,7 +120,10 @@ router.put("/:contactId", async (req, res, next) => {
     });
   }
   try {
-    const updatedContact = await updateContact(req.params.contactId, req.body);
+    const updatedContact = await service.updateContact(
+      req.params.contactId,
+      req.body
+    );
     if (updatedContact) {
       return res.status(200).json({
         status: "success",
@@ -122,7 +141,14 @@ router.put("/:contactId", async (req, res, next) => {
   } catch (error) {
     next(error);
   }
-  res.json({ message: "template message" });
-});
+  res.json({ message: "successfully deleted" });
+};
 
-module.exports = router;
+module.exports = {
+  get,
+  getById,
+  create,
+  update,
+  updateStatus,
+  remove,
+};
