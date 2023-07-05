@@ -1,9 +1,13 @@
 const Contact = require("../models/contactModel");
 const catchAsync = require("../utils/catchAsync");
 const listContacts = catchAsync(async (req, res) => {
-  const { _id } = req.user;
-  const contacts = await Contact.find({ owner: _id });
-  res.status(200).json(contacts);
+  try {
+    const { _id } = req.user;
+    const contacts = await Contact.find({ owner: _id });
+    res.status(200).json(contacts);
+  } catch (error) {
+    console.log("error1", error);
+  }
 });
 
 const getContactById = catchAsync(async (req, res) => {

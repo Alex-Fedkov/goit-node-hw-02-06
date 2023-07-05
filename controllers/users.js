@@ -9,10 +9,12 @@ const registerUser = catchAsync(async (req, res) => {
   if (user) {
     return res.status(409).json({ message: "Email in use" });
   }
-  const result = await User.create({ email, password });
-  user.password = undefined;
+  const { subscription } = await User.create({ email, password });
   res.status(201).json({
-    user: result,
+    user: {
+      email,
+      subscription,
+    },
   });
 });
 

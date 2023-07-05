@@ -5,15 +5,14 @@ const {
   currentUser,
   logoutUser,
 } = require("../../controllers/users");
-const {
-  checkCreateUserData,
-  auth,
-} = require("../../middlewares/userMiddlewares");
+const { auth } = require("../../middlewares/userMiddlewares");
+
+const validate = require("./validation-users");
 
 const router = express.Router();
 
-router.post("/register", checkCreateUserData, registerUser);
-router.post("/login", checkCreateUserData, loginUser);
+router.post("/register", validate.registration, registerUser);
+router.post("/login", validate.login, loginUser);
 router.get("/current", auth, currentUser);
 router.post("/logout", auth, logoutUser);
 
