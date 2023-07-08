@@ -16,7 +16,6 @@ exports.auth = async (req, res, next) => {
     }
     const { id } = jwt.verify(token, process.env.SECRET_KEY);
     const user = await User.findById(id);
-    console.log("user", user);
     if (!user || !user.token) {
       return res.status(401).json({
         status: "error",
