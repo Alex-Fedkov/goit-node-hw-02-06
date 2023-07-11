@@ -5,6 +5,8 @@ const {
   currentUser,
   logoutUser,
   changeAvatar,
+  verifyToken,
+  resendVerificationCode,
 } = require("../../controllers/users");
 const { auth } = require("../../middlewares/userMiddlewares");
 const multer = require("multer");
@@ -36,5 +38,7 @@ router.post("/login", validate.login, loginUser);
 router.get("/current", auth, currentUser);
 router.post("/logout", auth, logoutUser);
 router.patch("/avatars", auth, upload.single("avatar"), changeAvatar);
+router.post("/verify", validate.resendEmail, resendVerificationCode);
+router.get("/verify/:verificationToken", verifyToken);
 
 module.exports = router;
