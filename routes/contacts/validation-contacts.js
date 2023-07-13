@@ -37,7 +37,6 @@ const schemaUpdateStatusContact = joi.object({
 });
 
 const validate = async (schema, obj, next, res) => {
-  console.log("validation");
   try {
     await schema.validateAsync(obj);
     return next();

@@ -7,8 +7,30 @@ const gravatar = require("gravatar");
 const path = require("path");
 const fs = require("fs").promises;
 const shortid = require("shortid");
+const nodemailer = require("nodemailer");
 
 const AVATAR_PATH = "/avatars/";
+
+const sendToken = async ({ email, verificationToken }) => {
+  const transporter = nodemailer.createTransport({
+    host: "smtp.meta.ua",
+    port: 465,
+    secure: true,
+    auth: {
+      // TODO: replace `user` and `pass` values from <https://forwardemail.net>
+      user: "tonyako23@meta.ua",
+      pass: process.env.EMAIL_PASSWORD,
+    },
+  });
+
+  return transporter.sendMail({
+    from: "tonyako23@meta.ua", // sender address
+    to: email, // list of receivers
+    subject: "Hello ✔", // Subject line
+    text: "Hello world?", // plain text body
+    html: `<b><a href="http://localhost:3000/users/verify/${verificationToken}">Click to confirn your email</a></b>`, // html body
+  });
+};
 
 const registerUser = catchAsync(async (req, res) => {
   const { email, password } = req.body;
@@ -17,8 +39,20 @@ const registerUser = catchAsync(async (req, res) => {
     return res.status(409).json({ message: "Email in use" });
   }
   const avatarURL = await gravatar.url(email, {}, false);
+  const verificationToken = shortid.generate();
 
-  const { subscription } = await User.create({ email, password, avatarURL });
+  const { subscription } = await User.create({
+    email,
+    password,
+    avatarURL,
+    verificationToken,
+  });
+
+  try {
+    await sendToken({ email, verificationToken });
+  } catch (error) {
+    console.log("error", error);
+  }
   res.status(201).json({
     user: {
       email,
@@ -31,7 +65,6 @@ const loginUser = catchAsync(async (req, res) => {
   const { email, password } = req.body;
   const user = await User.findOne({ email });
   const match = await bcrypt.compare(password, user.password);
-  console.log("user", user);
   if (!user || !match) {
     return res.status(401).json({ message: "Email or password is wrong" });
   }
@@ -83,7 +116,6 @@ const changeAvatar = catchAsync(async (req, res, next) => {
     );
     await fs.unlink(temporaryName);
     const oldFileName = req.user.avatarURL.slice(AVATAR_PATH.length);
-    console.log("oldFileName", oldFileName);
     await fs.unlink(path.join(process.env.PATH_USER_AVATARS, oldFileName));
     res.status(200).json({
       avatarURL: updatedUser.avatarURL,
@@ -94,10 +126,51 @@ const changeAvatar = catchAsync(async (req, res, next) => {
   }
 });
 
+const verifyToken = catchAsync(async (req, res, next) => {
+  const { verificationToken } = req.params;
+  const user = await User.findOne({ verificationToken });
+  if (!user || !verificationToken) {
+    return res.status(404).json({ message: "User not found" });
+  }
+  try {
+    await User.findOneAndUpdate(
+      user._id,
+      {
+        verificationToken: null,
+        verify: true,
+      },
+      { new: true }
+    );
+    return res.status(200).json({ message: "Verification successful" });
+  } catch (error) {
+    return res.status(400).json({ message: error.message });
+  }
+});
+
+const resendVerificationCode = catchAsync(async (req, res, next) => {
+  const { email } = req.body;
+  const user = await User.findOne({ email });
+  if (user.verify) {
+    return res
+      .status(400)
+      .json({ message: "Verification has already been passed" });
+  }
+
+  try {
+    await sendToken({ email, verificationToken: user.verificationToken });
+  } catch (error) {
+    return res.status(400).json({ message: error.message });
+  }
+
+  return res.status(200).json({ message: "Verification email sent" });
+});
+
 module.exports = {
   registerUser,
   loginUser,
   currentUser,
   logoutUser,
   changeAvatar,
+  verifyToken,
+  resendVerificationCode,
 };
